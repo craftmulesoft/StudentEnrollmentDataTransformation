@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="d1654402-cc3b-40db-bbec-bbaf472efbdb" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="JsonTransformationFlow" doc:id="8cf4ff7e-6f5e-4de0-a25d-a9035d223540" >
+		<http:listener doc:name="Listener" doc:id="02ced991-7103-46e1-a952-d9c0a9f477ae" config-ref="HTTP_Listener_config" path="/json"/>
+		<ee:transform doc:name="Transform Message" doc:id="c376637a-91c8-40e1-b5ab-00d3ef89e201" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+// Output format is JSON
+output application/json 
+
+---
+// Normalize JSON students
+{
+  // Static field representing the university name
+  university: "Global Tech University",
+
+  // Transform, then sort students alphabetically by fullName
+  students: (
+    (payload.students filter (s) -> s.age >= 22) // ✅ Filter: keep only students with age ≥ 22
+    map (s) -> { // Iterate over each student in the input payload
+      studentId: s.id, // Map 'id' → 'studentId'
+      fullName: upper(s.name), // Convert 'name' to uppercase and map to 'fullName'
+
+      age: s.age, // Keep 'age' as-is
+      department: s.department, // Keep 'department' as-is
+      status: "ACTIVE", // Add a constant field 'status'
+      category:               // Add derived field 'category'
+          if (s.age < 23)             // Condition: if age is less than 23
+            "Junior"                  // Assign "Junior"
+          else 
+            "Senior"                  // Otherwise assign "Senior"
+    }
+  ) orderBy (s) -> s.fullName,  // Sort the transformed students by 'fullName' alphabetically
+
+  // Count only filtered students (age ≥ 22)
+  totalStudents: 
+    sizeOf(payload.students filter (s) -> s.age >= 22)  // Count filtered records
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="XMLtoJSONTransformation" doc:id="cd13f50e-5cd8-431c-8602-26795db2e343" >
+		<http:listener doc:name="Listener" doc:id="b8222f50-7cc4-49a0-b876-4cbbac65669e" config-ref="HTTP_Listener_config" path="/xml"/>
+		<ee:transform doc:name="Transform Message" doc:id="8f0bd138-cc4e-45b2-9ee1-c1c017626493" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+// Output format is JSON
+output application/json 
+
+---
+// Normalize JSON students
+{
+  // Static field representing the university name
+  university: "Global Tech University",
+
+  // Transform, then sort students alphabetically by fullName
+  students: (
+    (payload.students.*student filter (s) -> s.age >= 22) // ✅ Filter: keep only students with age ≥ 22
+    map (s) -> { // Iterate over each student in the input payload
+      studentId: s.id, // Map 'id' → 'studentId'
+      fullName: upper(s.name), // Convert 'name' to uppercase and map to 'fullName'
+
+      age: s.age as Number, // Keep 'age' as-is (cast to Number for logic)
+      department: s.department, // Keep 'department' as-is
+      status: "ACTIVE", // Add a constant field 'status'
+      category:               // Add derived field 'category'
+          if (s.age < 23)             // Condition: if age is less than 23
+            "Junior"                  // Assign "Junior"
+          else 
+            "Senior"                  // Otherwise assign "Senior"
+    }
+  ) orderBy (s) -> s.fullName,  // Sort the transformed students by 'fullName' alphabetically
+
+  // Count only filtered students (age ≥ 22)
+  totalStudents: 
+    sizeOf(payload.students.*student filter (s) -> s.age >= 22)  // Count filtered records
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="CSVtoJSONTransformation" doc:id="76ded8c3-2456-4917-8ed7-a7d35d170671" >
+		<http:listener doc:name="Listener" doc:id="eaa11b48-18a7-469a-b329-b88dad8f96c7" config-ref="HTTP_Listener_config" path="/csv"/>
+		<ee:transform doc:name="Transform Message" doc:id="a17463a0-a27f-4d65-bab6-0a0634860366" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+// Output format is JSON
+output application/json 
+
+---
+// Normalize JSON students
+{
+  // Static field representing the university name
+  university: "Global Tech University",
+
+  // Transform, then sort students alphabetically by fullName
+  students: (
+    (payload filter (s) -> s.age >= 22) // ✅ Filter: keep only students with age ≥ 22
+    map (s) -> { // Iterate over each student in the input payload
+      studentId: s.id, // Map 'id' → 'studentId'
+      fullName: upper(s.name), // Convert 'name' to uppercase and map to 'fullName'
+
+      age: s.age as Number, // Keep 'age' as-is (cast to Number for logic)
+      department: s.department, // Keep 'department' as-is
+      status: "ACTIVE", // Add a constant field 'status'
+      category:               // Add derived field 'category'
+          if (s.age < 23)             // Condition: if age is less than 23
+            "Junior"                  // Assign "Junior"
+          else 
+            "Senior"                  // Otherwise assign "Senior"
+    }
+  ) orderBy (s) -> s.fullName,  // Sort the transformed students by 'fullName' alphabetically
+
+  // Count only filtered students (age ≥ 22)
+  totalStudents: 
+    sizeOf(payload filter (s) -> s.age >= 22)  // Count filtered records
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
